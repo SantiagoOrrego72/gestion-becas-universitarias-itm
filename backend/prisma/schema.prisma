@@ -1,0 +1,228 @@
+// ══════════════════════════════════════════════════════════════
+//  SCHEMA PRISMA — Sistema de Gestión de Becas Universitarias
+//  PostgreSQL provider con enums nativos
+// ══════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────
+
+enum Rol {
+  ESTUDIANTE
+  EVALUADOR
+  ADMINISTRADOR
+  TESORERO
+}
+
+enum EstadoConvocatoria {
+  ABIERTA
+  CERRADA
+  VENCIDA
+}
+
+enum EstadoSolicitud {
+  EN_REVISION
+  APROBADO
+  RECHAZADO
+  DESEMBOLSADO
+}
+
+enum EstadoDocumento {
+  PENDIENTE
+  VERIFICADO
+  RECHAZADO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PROCESADO
+  COMPLETADO
+}
+
+// ─── USUARIO ─────────────────────────────────────────────────
+
+model Usuario {
+  id            String   @id @default(cuid())
+  correo        String   @unique
+  password      String
+  nombre        String
+  rol           Rol      @default(ESTUDIANTE)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  estudiante      Estudiante?
+  solicitudesEval SolicitudBeca[] @relation("EvaluadorSolicitudes")
+  evaluaciones    Evaluacion[]
+  notificaciones  Notificacion[]
+  auditorias      Auditoria[]
+
+  @@map("usuarios")
+}
+
+// ─── ESTUDIANTE ───────────────────────────────────────────────
+
+model Estudiante {
+  id             String   @id @default(cuid())
+  usuarioId      String   @unique
+  programa       String
+  documento      String   @unique
+  semestre       Int?
+  promedio       Float?
+  cuentaBancaria String?
+  creadoEn       DateTime @default(now())
+
+  // Relaciones
+  usuario     Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  solicitudes SolicitudBeca[]
+  documentos  Documento[]
+
+  @@map("estudiantes")
+}
+
+// ─── CONVOCATORIA ─────────────────────────────────────────────
+
+model Convocatoria {
+  id                   String             @id @default(cuid())
+  nombre               String
+  descripcion          String?
+  monto                Float
+  cuposTotal           Int
+  cuposUsados          Int                @default(0)
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  requisitos           String?
+  documentosRequeridos String?
+  estado               EstadoConvocatoria @default(ABIERTA)
+  creadoEn             DateTime           @default(now())
+  actualizadoEn        DateTime           @updatedAt
+
+  // Relaciones
+  solicitudes SolicitudBeca[]
+
+  @@map("convocatorias")
+}
+
+// ─── SOLICITUD BECA ───────────────────────────────────────────
+
+model SolicitudBeca {
+  id                 String          @id @default(cuid())
+  estudianteId       String
+  convocatoriaId     String
+  evaluadorId        String?
+  estado             EstadoSolicitud @default(EN_REVISION)
+  cartaMotivacion    String
+  fechaEnvio         DateTime        @default(now())
+  fechaActualizacion DateTime        @updatedAt
+
+  // Relaciones
+  estudiante   Estudiante   @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  convocatoria Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+  evaluador    Usuario?     @relation("EvaluadorSolicitudes", fields: [evaluadorId], references: [id])
+  documentos   Documento[]
+  evaluacion   Evaluacion?
+  pago         Pago?
+
+  // Un estudiante solo puede postular una vez por convocatoria
+  @@unique([estudianteId, convocatoriaId])
+  @@map("solicitudes_beca")
+}
+
+// ─── DOCUMENTO ────────────────────────────────────────────────
+
+model Documento {
+  id           String          @id @default(cuid())
+  estudianteId String
+  solicitudId  String?
+  tipo         String
+  nombre       String
+  rutaArchivo  String
+  mimeType     String
+  tamanio      Int
+  estado       EstadoDocumento @default(PENDIENTE)
+  creadoEn     DateTime        @default(now())
+
+  // Relaciones
+  estudiante Estudiante     @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  solicitud  SolicitudBeca? @relation(fields: [solicitudId], references: [id])
+
+  @@map("documentos")
+}
+
+// ─── EVALUACION ───────────────────────────────────────────────
+
+model Evaluacion {
+  id          String   @id @default(cuid())
+  solicitudId String   @unique
+  evaluadorId String
+  puntaje     Int
+  observacion String
+  fechaEval   DateTime @default(now())
+
+  // Relaciones
+  solicitud SolicitudBeca @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  evaluador Usuario       @relation(fields: [evaluadorId], references: [id])
+
+  @@map("evaluaciones")
+}
+
+// ─── PAGO ─────────────────────────────────────────────────────
+
+model Pago {
+  id                String     @id @default(cuid())
+  solicitudId       String     @unique
+  monto             Float
+  cuentaBancaria    String?
+  numeroTransaccion String?
+  fechaPago         DateTime?
+  estado            EstadoPago @default(PENDIENTE)
+  creadoEn          DateTime   @default(now())
+  actualizadoEn     DateTime   @updatedAt
+
+  // Relaciones
+  solicitud SolicitudBeca @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@map("pagos")
+}
+
+// ─── NOTIFICACION ─────────────────────────────────────────────
+
+model Notificacion {
+  id        String   @id @default(cuid())
+  usuarioId String
+  titulo    String
+  mensaje   String
+  leida     Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  // Relaciones
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("notificaciones")
+}
+
+// ─── AUDITORIA ────────────────────────────────────────────────
+
+model Auditoria {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  accion    String
+  entidad   String
+  entidadId String?
+  detalle   String?
+  ip        String?
+  creadoEn  DateTime @default(now())
+
+  // Relaciones
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("auditoria")
+}

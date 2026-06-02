@@ -1,0 +1,51 @@
+# ── Dependencias ──────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Variables de entorno (NUNCA subir al repositorio) ─────────
+.env
+.env.local
+.env.production
+
+# ── Build del frontend ─────────────────────────────────────────
+frontend/dist/
+frontend/.vite/
+
+# ── Base de datos SQLite (ya migrada a PostgreSQL) ────────────
+*.db
+*.db-journal
+*.sqlite
+backend/prisma/dev.db
+
+# ── Archivos subidos por usuarios ─────────────────────────────
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+backend/logs/*.log
+logs/
+
+# ── Sistema operativo ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Claude Code (configuración local, no va al repo) ─────────
+.claude/
+
+# ── Scripts de configuración local ───────────────────────────
+setup-database.ps1
+create-database.sql
+
+# ── Prisma generados (se regeneran con prisma generate) ───────
+backend/node_modules/.prisma/

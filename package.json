@@ -1,0 +1,17 @@
+{
+  "name": "sistema-becas-itm",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión de Becas Universitarias — ITM",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "backend:start": "cd backend && node server.js",
+    "backend:setup": "cd backend && npm install && npx prisma generate && npx prisma migrate deploy && node prisma/seed.js",
+    "frontend:setup": "cd frontend && npm install",
+    "setup": "npm run backend:setup && npm run frontend:setup",
+    "seed": "cd backend && node prisma/seed.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.1.0"
+  }
+}
